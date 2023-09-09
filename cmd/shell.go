@@ -54,10 +54,19 @@ func shellAction(ctx *Context, user bool) error {
 	zshCmd := exec.Command(zshPath)
 	zshCmd.Dir = workDir
 	zshCmd.Env = []string{
-		// required by homebrew
-		"HOME=" + os.Getenv("HOME"),
-		fmt.Sprintf("ZDOTDIR=%s", zshDotDir),
 		"_STEEL_SHELL_ACTIVE=true",
+		// required by homebrew
+		envvar("HOME", os.Getenv("HOME")),
+		// inject steel zshrc here
+		envvar("ZDOTDIR", zshDotDir),
+	}
+
+	if value, found := os.LookupEnv("TERM"); found {
+		zshCmd.Env = append(zshCmd.Env, envvar("TERM", value))
+	}
+
+	if value, found := os.LookupEnv("HISTFILE"); found {
+		zshCmd.Env = append(zshCmd.Env, envvar("HISTFILE", value))
 	}
 
 	zshCmd.Stdin = os.Stdin
@@ -83,28 +92,40 @@ func prepareZshConfig(brewPath string, brewfile *impl.Brewfile, user bool) (stri
 	return zshDotDir, nil
 }
 
+func envvar(name string, value string) string {
+	return fmt.Sprintf("%s=%s", name, value)
+}
+
 func lookupZsh() (string, error) {
 	return exec.LookPath("zsh")
 }
 
 func buildZshRc(brewPath string, brewfile *impl.Brewfile, user bool) string {
 	content := bytes.Buffer{}
-	// 1. Set TERM
+	// Ensure TERM is set
 	content.WriteString(`# Fix backspacing, etc
-export TERM=xterm
+export TERM=${TERM:-xterm}
+
 `)
+
+	// Pass through HISTFILE via rc file, as ZSH does not accept value from environment
+	if value, found := os.LookupEnv("HISTFILE"); found {
+		content.WriteString(fmt.Sprintf("export HISTFILE=%s\n\n", value))
+	}
 
 	// 2. Set some bling to differentiate shell
 	content.WriteString(`# Some bling
 PS1="🤘> "
+
 `)
 
 	content.WriteString("# Initialize Homebrew\n")
-	content.WriteString(fmt.Sprintf("eval \"$(%s shellenv)\"\n", brewPath))
+	content.WriteString(fmt.Sprintf("eval \"$(%s shellenv)\"\n\n", brewPath))
 
 	if brewfile.IncludesPackage("rbenv") {
 		content.WriteString(`# Initialize rbenv
 eval "$($HOMEBREW_PREFIX/bin/rbenv init - zsh)"
+
 `)
 	}
 

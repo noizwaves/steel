@@ -1,5 +1,5 @@
 /*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
+Copyright © 2023 Adam Neumann
 */
 package cmd
 
@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/noizwaves/steel/impl"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,13 @@ var shellCmd = &cobra.Command{
 }
 
 func shellAction(workDir string) error {
-	zshDotDir, err := prepareZshConfig()
+	brewfilePath := filepath.Join(workDir, "Brewfile")
+	brewfile, err := impl.LoadBrewfile(brewfilePath)
+	if err != nil {
+		return err
+	}
+
+	zshDotDir, err := prepareZshConfig(brewfile)
 	if err != nil {
 		return err
 	}
@@ -60,8 +67,8 @@ func shellAction(workDir string) error {
 	return zshCmd.Run()
 }
 
-func prepareZshConfig() (string, error) {
-	zshRcContent := buildZshRc()
+func prepareZshConfig(brewfile *impl.Brewfile) (string, error) {
+	zshRcContent := buildZshRc(brewfile)
 
 	zshDotDir, err := os.MkdirTemp("", "steel_zsh_*")
 	if err != nil {
@@ -80,7 +87,7 @@ func lookupZsh() (string, error) {
 	return exec.LookPath("zsh")
 }
 
-func buildZshRc() string {
+func buildZshRc(brewfile *impl.Brewfile) string {
 	content := bytes.Buffer{}
 	// 1. Set TERM
 	content.WriteString(`# Fix backspacing, etc
@@ -97,10 +104,11 @@ PS1="🤘> "
 eval "$(/opt/homebrew/bin/brew shellenv)"
 `)
 
-	// 3. load rbvenv
-	content.WriteString(`# Initialize rbenv
+	if brewfile.IncludesPackage("rbenv") {
+		content.WriteString(`# Initialize rbenv
 eval "$($HOMEBREW_PREFIX/bin/rbenv init - zsh)"
 `)
+	}
 
 	return content.String()
 }

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/noizwaves/steel/impl"
 	"github.com/spf13/cobra"
 )
 
@@ -36,14 +37,22 @@ var setupCmd = &cobra.Command{
 }
 
 func setupAction(workDir string) error {
-	// 1. `brew bundle install`
-	err := runBrewBundleInstall(workDir)
+	brewfilePath := filepath.Join(workDir, "Brewfile")
+	brewfile, err := impl.LoadBrewfile(brewfilePath)
 	if err != nil {
 		return err
 	}
 
-	// 2. `brew bundle exec -- rbenv install`
-	return runBrewBundleExecRbenvInstall()
+	err = runBrewBundleInstall(workDir)
+	if err != nil {
+		return err
+	}
+
+	if brewfile.IncludesPackage("rbenv") {
+		return runBrewBundleExecRbenvInstall()
+	}
+
+	return nil
 }
 
 const dummyBrewArg = "brew"

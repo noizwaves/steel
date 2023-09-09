@@ -14,8 +14,9 @@ import (
 )
 
 var setupCmd = &cobra.Command{
-	Use:   "setup",
-	Short: "Installs all dependencies required by the application",
+	Use:          "setup",
+	Short:        "Installs all dependencies required by the application",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		workDirValue, err := cmd.Flags().GetString("workdir")
 		if err != nil {

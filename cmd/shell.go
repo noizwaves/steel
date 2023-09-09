@@ -25,17 +25,22 @@ var shellCmd = &cobra.Command{
 			return err
 		}
 
+		userValue, err := cmd.Flags().GetBool("user")
+		if err != nil {
+			return err
+		}
+
 		context, err := NewContext(workDirValue)
 		if err != nil {
 			return err
 		}
 
-		return shellAction(context)
+		return shellAction(context, userValue)
 	},
 }
 
-func shellAction(ctx *Context) error {
-	zshDotDir, err := prepareZshConfig(ctx.Brewfile)
+func shellAction(ctx *Context, user bool) error {
+	zshDotDir, err := prepareZshConfig(ctx.BrewPath, ctx.Brewfile, user)
 	if err != nil {
 		return err
 	}
@@ -52,6 +57,7 @@ func shellAction(ctx *Context) error {
 		// required by homebrew
 		"HOME=" + os.Getenv("HOME"),
 		fmt.Sprintf("ZDOTDIR=%s", zshDotDir),
+		"_STEEL_SHELL_ACTIVE=true",
 	}
 
 	zshCmd.Stdin = os.Stdin
@@ -61,8 +67,8 @@ func shellAction(ctx *Context) error {
 	return zshCmd.Run()
 }
 
-func prepareZshConfig(brewfile *impl.Brewfile) (string, error) {
-	zshRcContent := buildZshRc(brewfile)
+func prepareZshConfig(brewPath string, brewfile *impl.Brewfile, user bool) (string, error) {
+	zshRcContent := buildZshRc(brewPath, brewfile, user)
 
 	zshDotDir, err := os.MkdirTemp("", "steel_zsh_*")
 	if err != nil {
@@ -81,7 +87,7 @@ func lookupZsh() (string, error) {
 	return exec.LookPath("zsh")
 }
 
-func buildZshRc(brewfile *impl.Brewfile) string {
+func buildZshRc(brewPath string, brewfile *impl.Brewfile, user bool) string {
 	content := bytes.Buffer{}
 	// 1. Set TERM
 	content.WriteString(`# Fix backspacing, etc
@@ -93,14 +99,19 @@ export TERM=xterm
 PS1="🤘> "
 `)
 
-	// TODO: look up brew path dynamically
-	content.WriteString(`# Initialize Homebrew
-eval "$(/opt/homebrew/bin/brew shellenv)"
-`)
+	content.WriteString("# Initialize Homebrew\n")
+	content.WriteString(fmt.Sprintf("eval \"$(%s shellenv)\"\n", brewPath))
 
 	if brewfile.IncludesPackage("rbenv") {
 		content.WriteString(`# Initialize rbenv
 eval "$($HOMEBREW_PREFIX/bin/rbenv init - zsh)"
+`)
+	}
+
+	if user {
+		content.WriteString(`
+# Load user .zshrc into shell
+source ~/.zshrc
 `)
 	}
 
@@ -109,4 +120,6 @@ eval "$($HOMEBREW_PREFIX/bin/rbenv init - zsh)"
 
 func init() {
 	rootCmd.AddCommand(shellCmd)
+
+	shellCmd.Flags().BoolP("user", "u", false, "Load ~/.zshrc into environment, making it impure")
 }

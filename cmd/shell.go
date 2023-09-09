@@ -129,6 +129,13 @@ eval "$($HOMEBREW_PREFIX/bin/rbenv init - zsh)"
 `)
 	}
 
+	if brewfile.IncludesPackage("goenv") {
+		content.WriteString(`# Initialize goenv
+eval "$($HOMEBREW_PREFIX/bin/goenv init -)"
+
+`)
+	}
+
 	if user {
 		content.WriteString(`
 # Load user .zshrc into shell

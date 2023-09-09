@@ -41,6 +41,10 @@ func setupAction(ctx *Context) error {
 		return runBrewBundleExecRbenvInstall(ctx.BrewPath)
 	}
 
+	if ctx.Brewfile.IncludesPackage("goenv") {
+		return runBrewBundleExecGoenvInstall(ctx.BrewPath)
+	}
+
 	return nil
 }
 
@@ -52,6 +56,28 @@ func runBrewBundleExecRbenvInstall(brewPath string) error {
 	cmd := exec.Cmd{
 		Path:   brewPath,
 		Args:   []string{dummyBrewArg, "bundle", "exec", "--", "rbenv", "install", "--skip-existing"},
+		Dir:    workDir,
+		Stdout: &cmdOut,
+		Stderr: &cmdErr,
+	}
+
+	err := cmd.Run()
+	if cmdOut.Len() > 0 {
+		fmt.Fprintf(os.Stdout, "**** OUTPUT START ****\n%s\n**** OUTPUT END ****\n", cmdOut.String())
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "**** ERROR START ****\n%s\n**** ERROR END ****\n", cmdErr.String())
+	}
+
+	return err
+}
+
+func runBrewBundleExecGoenvInstall(brewPath string) error {
+	cmdOut := bytes.Buffer{}
+	cmdErr := bytes.Buffer{}
+	cmd := exec.Cmd{
+		Path:   brewPath,
+		Args:   []string{dummyBrewArg, "bundle", "exec", "--", "goenv", "install", "--skip-existing"},
 		Dir:    workDir,
 		Stdout: &cmdOut,
 		Stderr: &cmdErr,

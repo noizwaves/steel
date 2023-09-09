@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
-	"github.com/noizwaves/steel/impl"
 	"github.com/spf13/cobra"
 )
 
@@ -19,37 +17,28 @@ var setupCmd = &cobra.Command{
 	Short:        "Installs all dependencies required by the application",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		workDirValue, err := cmd.Flags().GetString("workdir")
+		workDir, err := cmd.Flags().GetString("workdir")
 		if err != nil {
 			return err
 		}
 
-		workDir, err := filepath.Abs(workDirValue)
+		context, err := NewContext(workDir)
 		if err != nil {
 			return err
 		}
 
-		// TODO: validate system requirements met (Homebrew)
-		// TODO: validate workDir requirements met (Brewfile, etc)
-
-		return setupAction(workDir)
+		return setupAction(context)
 	},
 }
 
-func setupAction(workDir string) error {
-	brewfilePath := filepath.Join(workDir, "Brewfile")
-	brewfile, err := impl.LoadBrewfile(brewfilePath)
+func setupAction(ctx *Context) error {
+	err := runBrewBundleInstall(ctx.BrewPath, ctx.WorkDir)
 	if err != nil {
 		return err
 	}
 
-	err = runBrewBundleInstall(workDir)
-	if err != nil {
-		return err
-	}
-
-	if brewfile.IncludesPackage("rbenv") {
-		return runBrewBundleExecRbenvInstall()
+	if ctx.Brewfile.IncludesPackage("rbenv") {
+		return runBrewBundleExecRbenvInstall(ctx.BrewPath)
 	}
 
 	return nil
@@ -57,12 +46,7 @@ func setupAction(workDir string) error {
 
 const dummyBrewArg = "brew"
 
-func runBrewBundleExecRbenvInstall() error {
-	brewPath, err := lookupBrew()
-	if err != nil {
-		return err
-	}
-
+func runBrewBundleExecRbenvInstall(brewPath string) error {
 	cmdOut := bytes.Buffer{}
 	cmdErr := bytes.Buffer{}
 	cmd := exec.Cmd{
@@ -73,7 +57,7 @@ func runBrewBundleExecRbenvInstall() error {
 		Stderr: &cmdErr,
 	}
 
-	err = cmd.Run()
+	err := cmd.Run()
 	if cmdOut.Len() > 0 {
 		fmt.Fprintf(os.Stdout, "**** OUTPUT START ****\n%s\n**** OUTPUT END ****\n", cmdOut.String())
 	}
@@ -84,12 +68,7 @@ func runBrewBundleExecRbenvInstall() error {
 	return err
 }
 
-func runBrewBundleInstall(workDir string) error {
-	brewPath, err := lookupBrew()
-	if err != nil {
-		return err
-	}
-
+func runBrewBundleInstall(brewPath string, workDir string) error {
 	cmdOut := bytes.Buffer{}
 	cmdErr := bytes.Buffer{}
 	cmd := exec.Cmd{
@@ -100,7 +79,7 @@ func runBrewBundleInstall(workDir string) error {
 		Stderr: &cmdErr,
 	}
 
-	err = cmd.Run()
+	err := cmd.Run()
 	if cmdOut.Len() > 0 {
 		fmt.Fprintf(os.Stdout, "**** OUTPUT START ****\n%s\n**** OUTPUT END ****\n", cmdOut.String())
 	}
@@ -109,10 +88,6 @@ func runBrewBundleInstall(workDir string) error {
 	}
 
 	return err
-}
-
-func lookupBrew() (string, error) {
-	return exec.LookPath("brew")
 }
 
 func init() {

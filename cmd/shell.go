@@ -25,23 +25,17 @@ var shellCmd = &cobra.Command{
 			return err
 		}
 
-		workDir, err := filepath.Abs(workDirValue)
+		context, err := NewContext(workDirValue)
 		if err != nil {
 			return err
 		}
 
-		return shellAction(workDir)
+		return shellAction(context)
 	},
 }
 
-func shellAction(workDir string) error {
-	brewfilePath := filepath.Join(workDir, "Brewfile")
-	brewfile, err := impl.LoadBrewfile(brewfilePath)
-	if err != nil {
-		return err
-	}
-
-	zshDotDir, err := prepareZshConfig(brewfile)
+func shellAction(ctx *Context) error {
+	zshDotDir, err := prepareZshConfig(ctx.Brewfile)
 	if err != nil {
 		return err
 	}

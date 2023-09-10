@@ -85,7 +85,7 @@ func prepareZshConfig(brewPath string, brewfile *impl.Brewfile, user bool) (stri
 	}
 
 	zshRcPath := filepath.Join(zshDotDir, ".zshrc")
-	err = os.WriteFile(zshRcPath, []byte(zshRcContent), 0666)
+	err = os.WriteFile(zshRcPath, []byte(zshRcContent), 0644)
 	if err != nil {
 		return "", err
 	}

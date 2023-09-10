@@ -103,6 +103,11 @@ func lookupZsh() (string, error) {
 
 func buildZshRc(brewPath string, brewfile *impl.Brewfile, user bool) string {
 	content := bytes.Buffer{}
+
+	if user {
+		content.WriteString("[ -f $HOME/.zshenv ] && source $HOME/.zshenv\n")
+	}
+
 	// Ensure TERM is set
 	content.WriteString(`# Fix backspacing, etc
 export TERM=${TERM:-xterm}

@@ -50,7 +50,7 @@ func shellAction(ctx *Context, user bool) error {
 		return err
 	}
 
-	// start interactive zsh
+	// start zsh
 	zshCmd := exec.Command(zshPath)
 	zshCmd.Dir = workDir
 	zshCmd.Env = []string{
@@ -83,6 +83,7 @@ func prepareZshConfig(brewPath string, brewfile *impl.Brewfile, user bool) (stri
 	if err != nil {
 		return "", err
 	}
+
 	zshRcPath := filepath.Join(zshDotDir, ".zshrc")
 	err = os.WriteFile(zshRcPath, []byte(zshRcContent), 0666)
 	if err != nil {

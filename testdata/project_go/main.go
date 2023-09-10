@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	fmt.Println(runtime.Version())
+	fmt.Printf("GoVersion==%s", runtime.Version())
 }

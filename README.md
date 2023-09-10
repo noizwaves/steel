@@ -26,3 +26,7 @@ An experimental local development environment CLI, powered by Homebrew.
 1. `steel --workdir testdata/project_go setup`
 1. `steel --workdir testdata/project_go shell`
 1. `go run .`
+
+## Testing
+
+`go test -v`

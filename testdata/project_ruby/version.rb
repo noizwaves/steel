@@ -1,1 +1,1 @@
-puts RUBY_VERSION
+puts "RubyVersion==#{RUBY_VERSION}"
